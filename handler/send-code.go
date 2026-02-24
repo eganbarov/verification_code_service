@@ -10,7 +10,8 @@ import (
 )
 
 type SendCodePostData struct {
-	Phone string `json:"phone"`
+	Phone  string `json:"phone"`
+	Action string `json:action`
 }
 
 type SentCodeResponse struct {
@@ -39,7 +40,7 @@ func (s *SendCodeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	code := rand.IntN(900000) + 100000
 
 	//need to write it into redis and write to logs.
-	fileName := sendCodePost.Phone + ".txt"
+	fileName := sendCodePost.Phone + "_" + sendCodePost.Action + ".txt"
 	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

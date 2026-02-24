@@ -8,8 +8,9 @@ import (
 )
 
 type ValidateCodePostData struct {
-	Code  string `json:"code"`
-	Phone string `json:"phone"`
+	Code   string `json:"code"`
+	Phone  string `json:"phone"`
+	Action string `json:"action"`
 }
 
 type ValidateCodeResponse struct {
@@ -42,7 +43,7 @@ func (v *ValidateCodeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 
 	//need to read it from redis.
-	fileName := validateCodePost.Phone + ".txt"
+	fileName := validateCodePost.Phone + "_" + validateCodePost.Action + ".txt"
 	data, err := os.ReadFile(fileName)
 	if err != nil {
 		http.Error(w, "Error during reading file", http.StatusInternalServerError)
