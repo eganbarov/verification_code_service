@@ -1,10 +1,11 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"os"
+
+	"github.com/redis/go-redis/v9"
 )
 
 type ValidateCodePostData struct {
@@ -19,7 +20,9 @@ type ValidateCodeResponse struct {
 	Error      string `json:"error"`
 }
 
-type ValidateCodeHandler struct{}
+type ValidateCodeHandler struct {
+	Redis *redis.Client
+}
 
 func (v *ValidateCodeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var validateCodePost ValidateCodePostData
@@ -29,8 +32,6 @@ func (v *ValidateCodeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	defer r.Body.Close()
-	fmt.Println(validateCodePost.Phone)
-	fmt.Println(validateCodePost.Code)
 
 	if validateCodePost.Phone == "" {
 		http.Error(w, "Error phone for validate code", http.StatusInternalServerError)
@@ -42,19 +43,25 @@ func (v *ValidateCodeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	//need to read it from redis.
-	fileName := validateCodePost.Phone + "_" + validateCodePost.Action + ".txt"
-	data, err := os.ReadFile(fileName)
-	if err != nil {
-		http.Error(w, "Error during reading file", http.StatusInternalServerError)
+	if validateCodePost.Action == "" {
+		http.Error(w, "Error action for validate code", http.StatusInternalServerError)
 		return
 	}
 
-	code := string(data)
-	if code != validateCodePost.Code {
-		fmt.Println(code)
-		fmt.Println(validateCodePost.Code)
-		http.Error(w, "The code is not valid", http.StatusInternalServerError)
+	codeKey := validateCodePost.Phone + "_" + validateCodePost.Action
+	value, err := v.Redis.Get(context.Background(), codeKey).Result()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if value != validateCodePost.Code {
+		http.Error(w, "The code is invalid", http.StatusInternalServerError)
+		return
+	}
+
+	if err := v.Redis.Del(context.Background(), codeKey).Err(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 

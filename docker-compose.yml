@@ -9,6 +9,8 @@ services:
       - go-network
     depends_on:
       - redis
+    environment:
+      - REDIS_HOST=redis:6379
 
   redis:
     image: redis:alpine

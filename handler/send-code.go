@@ -1,17 +1,18 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
 	"math/rand/v2"
 	"net/http"
-	"os"
-	"strconv"
+	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
 type SendCodePostData struct {
 	Phone  string `json:"phone"`
-	Action string `json:action`
+	Action string `json:"action"`
 }
 
 type SentCodeResponse struct {
@@ -20,7 +21,9 @@ type SentCodeResponse struct {
 	Error      string `json:"error"`
 }
 
-type SendCodeHandler struct{}
+type SendCodeHandler struct {
+	Redis *redis.Client
+}
 
 func (s *SendCodeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var sendCodePost SendCodePostData
@@ -30,31 +33,25 @@ func (s *SendCodeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
-	fmt.Println(sendCodePost.Phone)
 
 	if sendCodePost.Phone == "" {
 		http.Error(w, "Empty phone for send code", http.StatusBadRequest)
 		return
 	}
 
+	if sendCodePost.Action == "" {
+		http.Error(w, "Empty action for send code", http.StatusBadRequest)
+		return
+	}
+
+	codeKey := sendCodePost.Phone + "_" + sendCodePost.Action
 	code := rand.IntN(900000) + 100000
-
-	//need to write it into redis and write to logs.
-	fileName := sendCodePost.Phone + "_" + sendCodePost.Action + ".txt"
-	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
+	if err := s.Redis.Set(context.Background(), codeKey, code, 300*time.Second).Err(); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	defer file.Close()
 
-	codeString := strconv.Itoa(code)
-	_, err = file.WriteString(codeString + "\n")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	fmt.Println(code)
+	// send code via SMS
 
 	isSentCode := true
 	responseData := SentCodeResponse{

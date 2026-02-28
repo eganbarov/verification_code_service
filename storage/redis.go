@@ -10,8 +10,6 @@ import (
 
 type Config struct {
 	Addr        string        `yaml:"addr"`
-	Password    string        `yaml:"password"`
-	User        string        `yaml:"user"`
 	DB          int           `yaml:"db"`
 	MaxRetries  int           `yaml:"max_retries"`
 	DialTimeout time.Duration `yaml:"dial_timeout"`
@@ -21,9 +19,7 @@ type Config struct {
 func NewClient(ctx context.Context, cfg Config) (*redis.Client, error) {
 	db := redis.NewClient(&redis.Options{
 		Addr:         cfg.Addr,
-		Password:     cfg.Password,
 		DB:           cfg.DB,
-		Username:     cfg.User,
 		MaxRetries:   cfg.MaxRetries,
 		DialTimeout:  cfg.DialTimeout,
 		ReadTimeout:  cfg.Timeout,
