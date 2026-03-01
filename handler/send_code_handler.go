@@ -21,8 +21,8 @@ type sentCodeResponse struct {
 }
 
 type SendCodeHandler struct {
-	CodeRepository *repository.CodeRepository
-	CodeGenerator  *generator.CodeGenerator
+	CodeRepository repository.CodeRepo
+	CodeGenerator  generator.CodeGen
 	CodeSender     sender.CodeSender
 }
 

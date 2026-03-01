@@ -5,6 +5,10 @@ import (
 	"strconv"
 )
 
+type CodeGen interface {
+	GenerateCode() string
+}
+
 type CodeGenerator struct {
 }
 

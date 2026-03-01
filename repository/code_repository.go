@@ -7,17 +7,14 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type CodeRepository struct {
-	Redis *redis.Client
+type CodeRepo interface {
+	GetCode(phone, action string) (string, error)
+	StoreCode(phone, action, code string) error
+	DeleteCode(phone, action string) error
 }
 
-func (r *CodeRepository) StoreCode(phone, action, code string) error {
-	codeKey := generateCodeKey(phone, action)
-	if err := r.Redis.Set(context.Background(), codeKey, code, 300*time.Second).Err(); err != nil {
-		return err
-	}
-
-	return nil
+type CodeRepository struct {
+	Redis *redis.Client
 }
 
 func (r *CodeRepository) GetCode(phone, action string) (string, error) {
@@ -28,6 +25,15 @@ func (r *CodeRepository) GetCode(phone, action string) (string, error) {
 	}
 
 	return value, nil
+}
+
+func (r *CodeRepository) StoreCode(phone, action, code string) error {
+	codeKey := generateCodeKey(phone, action)
+	if err := r.Redis.Set(context.Background(), codeKey, code, 300*time.Second).Err(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *CodeRepository) DeleteCode(phone, action string) error {
