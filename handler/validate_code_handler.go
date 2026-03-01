@@ -20,7 +20,7 @@ type validateCodeResponse struct {
 }
 
 type ValidateCodeHandler struct {
-	CodeRepository *repository.CodeRepository
+	CodeRepository repository.CodeRepo
 }
 
 func (v *ValidateCodeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
