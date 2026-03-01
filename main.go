@@ -8,7 +8,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/eganbarov/verification_code_service/generator"
 	"github.com/eganbarov/verification_code_service/handler"
+	"github.com/eganbarov/verification_code_service/repository"
+	"github.com/eganbarov/verification_code_service/sender"
 	"github.com/eganbarov/verification_code_service/storage"
 	"github.com/redis/go-redis/v9"
 )
@@ -19,13 +22,29 @@ func main() {
 
 func startServer() {
 	db := initRedisStorage()
+	codeRepository := repository.CodeRepository{Redis: db}
+	codeGenerator := generator.CodeGenerator{}
+	codeSender := sender.SmsSender{}
 
 	mux := http.NewServeMux()
-	mux.Handle("POST /send-code", &handler.SendCodeHandler{Redis: db})
-	mux.Handle("POST /validate-code", &handler.ValidateCodeHandler{Redis: db})
+	mux.Handle(
+		"POST /send-code",
+		&handler.SendCodeHandler{
+			CodeRepository: &codeRepository,
+			CodeGenerator:  &codeGenerator,
+			CodeSender:     &codeSender,
+		},
+	)
+	mux.Handle(
+		"POST /validate-code",
+		&handler.ValidateCodeHandler{
+			CodeRepository: &codeRepository,
+		},
+	)
 
-	fmt.Println("Server starting on :8080")
-	if err := http.ListenAndServe(":8080", mux); err != nil {
+	listenPort := os.Getenv("LISTEN_PORT")
+	fmt.Println("Server starting on :" + listenPort)
+	if err := http.ListenAndServe(":"+listenPort, mux); err != nil {
 		log.Fatal(err)
 	}
 }
