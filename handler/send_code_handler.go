@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/eganbarov/verification_code_service/generator"
+	"github.com/eganbarov/verification_code_service/lock"
 	"github.com/eganbarov/verification_code_service/repository"
 	"github.com/eganbarov/verification_code_service/sender"
 )
@@ -22,6 +23,7 @@ type sentCodeResponse struct {
 
 type SendCodeHandler struct {
 	CodeRepository repository.CodeRepo
+	Locker         lock.Locker
 	CodeGenerator  generator.CodeGen
 	CodeSender     sender.CodeSender
 }
@@ -45,6 +47,12 @@ func (s *SendCodeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	isLocked := s.Locker.IsLocked(sendCodePost.Phone, sendCodePost.Action)
+	if isLocked == true {
+		renderSuccessSentCode(w)
+		return
+	}
+
 	code := s.CodeGenerator.GenerateCode()
 	if err := s.CodeRepository.StoreCode(sendCodePost.Phone, sendCodePost.Action, code); err != nil {
 		renderErrorSentCode(w, err.Error(), http.StatusInternalServerError)
@@ -55,6 +63,12 @@ func (s *SendCodeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		renderErrorSentCode(w, "Error during sending a code", http.StatusInternalServerError)
 		return
 	}
+
+	if err := s.Locker.Lock(sendCodePost.Phone, sendCodePost.Action); err != nil {
+		renderErrorSentCode(w, "Error during lock sending", http.StatusInternalServerError)
+		return
+	}
+
 	renderSuccessSentCode(w)
 }
 

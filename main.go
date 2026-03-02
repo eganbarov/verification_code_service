@@ -10,6 +10,7 @@ import (
 
 	"github.com/eganbarov/verification_code_service/generator"
 	"github.com/eganbarov/verification_code_service/handler"
+	"github.com/eganbarov/verification_code_service/lock"
 	"github.com/eganbarov/verification_code_service/repository"
 	"github.com/eganbarov/verification_code_service/sender"
 	"github.com/eganbarov/verification_code_service/storage"
@@ -23,6 +24,7 @@ func main() {
 func startServer() {
 	db := initRedisStorage()
 	codeRepository := repository.CodeRepository{Redis: db}
+	locker := lock.RedisLocker{Redis: db}
 	codeGenerator := generator.CodeGenerator{}
 	codeSender := sender.SmsSender{}
 
@@ -31,6 +33,7 @@ func startServer() {
 		"POST /send-code",
 		&handler.SendCodeHandler{
 			CodeRepository: &codeRepository,
+			Locker:         &locker,
 			CodeGenerator:  &codeGenerator,
 			CodeSender:     &codeSender,
 		},
@@ -39,6 +42,7 @@ func startServer() {
 		"POST /validate-code",
 		&handler.ValidateCodeHandler{
 			CodeRepository: &codeRepository,
+			Locker:         &locker,
 		},
 	)
 

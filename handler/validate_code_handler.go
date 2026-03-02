@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/eganbarov/verification_code_service/lock"
 	"github.com/eganbarov/verification_code_service/repository"
 )
 
@@ -21,6 +22,7 @@ type validateCodeResponse struct {
 
 type ValidateCodeHandler struct {
 	CodeRepository repository.CodeRepo
+	Locker         lock.Locker
 }
 
 func (v *ValidateCodeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -59,6 +61,11 @@ func (v *ValidateCodeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := v.CodeRepository.DeleteCode(validateCodePost.Phone, validateCodePost.Action); err != nil {
+		renderErrorValidateCode(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := v.Locker.Unlock(validateCodePost.Phone, validateCodePost.Action); err != nil {
 		renderErrorValidateCode(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
