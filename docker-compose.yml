@@ -12,6 +12,12 @@ services:
     environment:
       - LISTEN_PORT=8080
       - REDIS_HOST=redis:6379
+      - REDIS_DB=0
+      - REDIS_MAX_RETRIES=5
+      - REDIS_DIAL_TIMEOUT=10
+      - REDIS_TIMEOUT=5
+      - CODE_TTL=300
+      - REPEAT_SENT_CODE_TTL=60
 
   redis:
     image: redis:alpine

@@ -6,8 +6,10 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
+	"github.com/eganbarov/verification_code_service/config"
 	"github.com/eganbarov/verification_code_service/generator"
 	"github.com/eganbarov/verification_code_service/handler"
 	"github.com/eganbarov/verification_code_service/lock"
@@ -23,8 +25,9 @@ func main() {
 
 func startServer() {
 	db := initRedisStorage()
-	codeRepository := repository.CodeRepository{Redis: db}
-	locker := lock.RedisLocker{Redis: db}
+	appConfig := initAppConfig()
+	codeRepository := repository.CodeRepository{Redis: db, AppConfig: appConfig}
+	locker := lock.RedisLocker{Redis: db, AppConfig: appConfig}
 	codeGenerator := generator.CodeGenerator{}
 	codeSender := sender.SmsSender{}
 
@@ -54,17 +57,52 @@ func startServer() {
 }
 
 func initRedisStorage() *redis.Client {
+	dbNumber, err := strconv.Atoi(os.Getenv("REDIS_DB"))
+	if err != nil {
+		dbNumber = storage.DB
+	}
+	maxRetries, err := strconv.Atoi(os.Getenv("REDIS_MAX_RETRIES"))
+	if err != nil {
+		maxRetries = storage.MAX_RETRIES
+	}
+	dialTimeout, err := strconv.Atoi(os.Getenv("REDIS_DIAL_TIMEOUT"))
+	if err != nil {
+		dialTimeout = storage.DIAL_TIMEOUT
+	}
+	timeout, err := strconv.Atoi(os.Getenv("REDIS_TIMEOUT"))
+	if err != nil {
+		timeout = storage.TIMEOUT
+	}
 	cnf := storage.Config{
 		Addr:        os.Getenv("REDIS_HOST"),
-		DB:          0,
-		MaxRetries:  5,
-		DialTimeout: 10 * time.Second,
-		Timeout:     5 * time.Second,
+		DB:          dbNumber,
+		MaxRetries:  maxRetries,
+		DialTimeout: time.Duration(dialTimeout) * time.Second,
+		Timeout:     time.Duration(timeout) * time.Second,
 	}
+
 	db, err := storage.NewClient(context.Background(), cnf)
 	if err != nil {
 		panic(err)
 	}
 
 	return db
+}
+
+func initAppConfig() *config.AppConfig {
+	codeTtl, err := strconv.Atoi(os.Getenv("CODE_TTL"))
+	if err != nil {
+		codeTtl = config.CODE_TTL
+	}
+	repeatSentCodeTtl, err := strconv.Atoi(os.Getenv("REPEAT_SENT_CODE_TTL"))
+	if err != nil {
+		repeatSentCodeTtl = config.REPEAT_SENT_CODE_TTL
+	}
+
+	appConfig := config.AppConfig{
+		CodeTtl:           codeTtl,
+		RepeatSentCodeTtl: repeatSentCodeTtl,
+	}
+
+	return &appConfig
 }

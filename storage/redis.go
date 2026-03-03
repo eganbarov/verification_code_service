@@ -8,6 +8,11 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+const DB = 0
+const MAX_RETRIES = 5
+const DIAL_TIMEOUT = 10
+const TIMEOUT = 5
+
 type Config struct {
 	Addr        string        `yaml:"addr"`
 	DB          int           `yaml:"db"`

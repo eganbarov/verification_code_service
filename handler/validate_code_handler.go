@@ -65,7 +65,7 @@ func (v *ValidateCodeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := v.Locker.Unlock(validateCodePost.Phone, validateCodePost.Action); err != nil {
+	if err := v.Locker.Release(validateCodePost.Phone, validateCodePost.Action); err != nil {
 		renderErrorValidateCode(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

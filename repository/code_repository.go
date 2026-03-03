@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/eganbarov/verification_code_service/config"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -14,7 +15,8 @@ type CodeRepo interface {
 }
 
 type CodeRepository struct {
-	Redis *redis.Client
+	Redis     *redis.Client
+	AppConfig *config.AppConfig
 }
 
 func (r *CodeRepository) GetCode(phone, action string) (string, error) {
@@ -29,7 +31,8 @@ func (r *CodeRepository) GetCode(phone, action string) (string, error) {
 
 func (r *CodeRepository) StoreCode(phone, action, code string) error {
 	codeKey := generateCodeKey(phone, action)
-	if err := r.Redis.Set(context.Background(), codeKey, code, 300*time.Second).Err(); err != nil {
+	codeTtl := time.Duration(r.AppConfig.CodeTtl) * time.Second
+	if err := r.Redis.Set(context.Background(), codeKey, code, codeTtl).Err(); err != nil {
 		return err
 	}
 

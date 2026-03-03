@@ -4,29 +4,32 @@ import (
 	"context"
 	"time"
 
+	"github.com/eganbarov/verification_code_service/config"
 	"github.com/redis/go-redis/v9"
 )
 
 type Locker interface {
 	Lock(phone, action string) error
 	IsLocked(phone, action string) bool
-	Unlock(phone, action string) error
+	Release(phone, action string) error
 }
 
 type RedisLocker struct {
-	Redis *redis.Client
+	Redis     *redis.Client
+	AppConfig *config.AppConfig
 }
 
 func (l *RedisLocker) Lock(phone, action string) error {
 	lockKey := generateKey(phone, action)
-	if err := l.Redis.Set(context.Background(), lockKey, 1, 60*time.Second).Err(); err != nil {
+	lockTtl := time.Duration(l.AppConfig.RepeatSentCodeTtl) * time.Second
+	if err := l.Redis.Set(context.Background(), lockKey, 1, lockTtl).Err(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (l *RedisLocker) Unlock(phone, action string) error {
+func (l *RedisLocker) Release(phone, action string) error {
 	lockKey := generateKey(phone, action)
 	if err := l.Redis.Del(context.Background(), lockKey).Err(); err != nil {
 		return err
