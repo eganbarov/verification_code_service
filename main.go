@@ -6,8 +6,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
-	"time"
 
 	"github.com/eganbarov/verification_code_service/config"
 	"github.com/eganbarov/verification_code_service/generator"
@@ -24,10 +22,16 @@ func main() {
 }
 
 func startServer() {
-	db := initRedisStorage()
-	appConfig := initAppConfig()
-	codeRepository := repository.CodeRepository{Redis: db, AppConfig: appConfig}
-	locker := lock.RedisLocker{Redis: db, AppConfig: appConfig}
+	appConfig := loadAppConfig()
+	db := initRedisStorage(&appConfig.StorageConfig)
+	codeRepository := repository.CodeRepository{
+		Redis:     db,
+		AppConfig: appConfig,
+	}
+	locker := lock.RedisLocker{
+		Redis:     db,
+		AppConfig: appConfig,
+	}
 	codeGenerator := generator.CodeGenerator{}
 	codeSender := sender.SmsSender{}
 
@@ -56,31 +60,7 @@ func startServer() {
 	}
 }
 
-func initRedisStorage() *redis.Client {
-	dbNumber, err := strconv.Atoi(os.Getenv("REDIS_DB"))
-	if err != nil {
-		dbNumber = storage.DB
-	}
-	maxRetries, err := strconv.Atoi(os.Getenv("REDIS_MAX_RETRIES"))
-	if err != nil {
-		maxRetries = storage.MAX_RETRIES
-	}
-	dialTimeout, err := strconv.Atoi(os.Getenv("REDIS_DIAL_TIMEOUT"))
-	if err != nil {
-		dialTimeout = storage.DIAL_TIMEOUT
-	}
-	timeout, err := strconv.Atoi(os.Getenv("REDIS_TIMEOUT"))
-	if err != nil {
-		timeout = storage.TIMEOUT
-	}
-	cnf := storage.Config{
-		Addr:        os.Getenv("REDIS_HOST"),
-		DB:          dbNumber,
-		MaxRetries:  maxRetries,
-		DialTimeout: time.Duration(dialTimeout) * time.Second,
-		Timeout:     time.Duration(timeout) * time.Second,
-	}
-
+func initRedisStorage(cnf *config.StorageConfig) *redis.Client {
 	db, err := storage.NewClient(context.Background(), cnf)
 	if err != nil {
 		panic(err)
@@ -89,20 +69,12 @@ func initRedisStorage() *redis.Client {
 	return db
 }
 
-func initAppConfig() *config.AppConfig {
-	codeTtl, err := strconv.Atoi(os.Getenv("CODE_TTL"))
+func loadAppConfig() *config.AppConfig {
+	appConfig := &config.AppConfig{}
+	cnf, err := appConfig.LoadConfig()
 	if err != nil {
-		codeTtl = config.CODE_TTL
-	}
-	repeatSentCodeTtl, err := strconv.Atoi(os.Getenv("REPEAT_SENT_CODE_TTL"))
-	if err != nil {
-		repeatSentCodeTtl = config.REPEAT_SENT_CODE_TTL
+		log.Fatal(err)
 	}
 
-	appConfig := config.AppConfig{
-		CodeTtl:           codeTtl,
-		RepeatSentCodeTtl: repeatSentCodeTtl,
-	}
-
-	return &appConfig
+	return cnf
 }
