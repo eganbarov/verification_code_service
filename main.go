@@ -54,6 +54,10 @@ func startServer() {
 			Locker:         &locker,
 		},
 	)
+	mux.Handle(
+		"GET /health-check",
+		&handler.HealthCheckHandler{},
+	)
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
