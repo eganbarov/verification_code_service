@@ -1,6 +1,12 @@
 # verification_code_service
 Service for generation and verification code which is sent.
 
+## Description
+Now a service has only a mock implementation of code's sender (which output it)
+Need to write implementation of 
+> sender/sms-code-sender.go
+Just use your favorite sender provider.
+
 ## Examples
 ### HealthCheck
 #### Request
