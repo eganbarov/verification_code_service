@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/eganbarov/verification_code_service/generator"
 	"github.com/eganbarov/verification_code_service/handler"
 	"github.com/eganbarov/verification_code_service/lock"
+	"github.com/eganbarov/verification_code_service/middleware"
 	"github.com/eganbarov/verification_code_service/repository"
 	"github.com/eganbarov/verification_code_service/sender"
 	"github.com/eganbarov/verification_code_service/storage"
@@ -23,7 +25,7 @@ func main() {
 
 func startServer() {
 	appConfig := loadAppConfig()
-	db := initRedisStorage(&appConfig.StorageConfig)
+	db := initStorage(&appConfig.StorageConfig)
 	codeRepository := repository.CodeRepository{
 		Redis:     db,
 		AppConfig: appConfig,
@@ -53,14 +55,20 @@ func startServer() {
 		},
 	)
 
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+
+	wrappedMux := middleware.LoggingMiddleware(mux, logger)
+
 	listenPort := os.Getenv("LISTEN_PORT")
 	fmt.Println("Server starting on :" + listenPort)
-	if err := http.ListenAndServe(":"+listenPort, mux); err != nil {
+
+	if err := http.ListenAndServe(":"+listenPort, wrappedMux); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func initRedisStorage(cnf *config.StorageConfig) *redis.Client {
+func initStorage(cnf *config.StorageConfig) *redis.Client {
 	db, err := storage.NewClient(context.Background(), cnf)
 	if err != nil {
 		panic(err)
