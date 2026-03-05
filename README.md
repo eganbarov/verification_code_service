@@ -2,6 +2,16 @@
 Service for generation and verification code which is sent.
 
 ## Examples
+### HealthCheck
+#### Request
+```
+curl http://localhost:8080/health-check
+```
+#### Response
+```json
+{"statusCode":200,"msg":"Ok"}
+```
+
 ### Send code
 #### Request
 ```
