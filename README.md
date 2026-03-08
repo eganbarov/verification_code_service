@@ -23,7 +23,6 @@ curl http://localhost:8080/health-check
 ### Send code
 ```
 required params: "phone" and "action"
-
 ```
 #### Request
 ```
@@ -37,7 +36,6 @@ curl -X POST -H "Content-Type: application/json" -d '{"phone": "89067001910","ac
 ### Verify code
 ```
 required params: "phone", "action", "code"
-
 ```
 #### Request
 ```
